@@ -94,9 +94,22 @@ describe("Lists route", function() {
 				request(app)
 					.get("/api/lists/" + savedList._id)
 					.set("Authorization", authenticationToken)
-					.expect("Content-Type", /json/)	
 					.expect(200, done);					
 			});			
+		});
+
+		it("Should return the list", function() {
+
+			createPersistedList("My list", user, function(savedList) {
+				request(app)
+					.get("/api/lists/" + savedList._id)
+					.set("Authorization", authenticationToken)
+					.expect("Content-Type", /json/)
+					.end(function(err, res) {
+						assert.equal(res.body._id, savedList._id);
+						assert.equal(res.body.name, savedList.name);
+					});
+			});
 		});
 
 		it("Should return http status 'forbidden' (403) if the logged user is not the list owner", function(done) {
