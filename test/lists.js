@@ -98,7 +98,7 @@ describe("Lists route", function() {
 			});			
 		});
 
-		it("Should return the list", function() {
+		it("Should return the list", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
@@ -106,8 +106,11 @@ describe("Lists route", function() {
 					.set("Authorization", authenticationToken)
 					.expect("Content-Type", /json/)
 					.end(function(err, res) {
+
 						assert.equal(res.body._id, savedList._id);
 						assert.equal(res.body.name, savedList.name);
+
+						done();
 					});
 			});
 		});
@@ -136,7 +139,7 @@ describe("Lists route", function() {
 		});
 	});
 
-	describe("Creating a new list", function() {
+	describe("Creating a new list", function(done) {
 
 		it("Should return http status 'created' (201)", function(done) {
 
@@ -157,6 +160,23 @@ describe("Lists route", function() {
 					.send(savedList)
 					.set("Authorization", authenticationToken)
 					.expect("Content-Type", /json/, done);
+			});
+		});
+
+		it("Should add the created list in the data store", function(done) {
+
+			createPersistedList("My list", user, function(savedList) {
+				request(app)
+					.post("/api/lists")
+					.send(savedList)
+					.set("Authorization", authenticationToken)
+					.expect(200)
+					.end(function(err, res) {
+						List.findById(res.body._id, function(err, createdList) {
+							assert.notEqual(createdList, null);
+							done();
+						});
+					});
 			});
 		});
 
@@ -188,7 +208,7 @@ describe("Lists route", function() {
 
 	describe("Updating a list", function() {
 
-		it("Should return http status 'no content' 204 if list exists", function(done) {
+		it("Should return http status 'no content' 204", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
 
@@ -199,6 +219,25 @@ describe("Lists route", function() {
 					.send(savedList)
 					.set("Authorization", authenticationToken)
 					.expect(204, done);
+			});
+		});
+
+		it("Should update the list in the data store", function(done) {
+
+			createPersistedList("My list", user, function(savedList) {
+
+				savedList.name = "my list 2";
+
+				request(app)
+					.put("/api/lists/"  + savedList._id)
+					.send(savedList)
+					.set("Authorization", authenticationToken)
+					.end(function() {
+						List.findById(savedList._id, function(err, updatedList) {
+							assert.equal(updatedList.name, savedList.name);
+							done();
+						})
+					});
 			});
 		});
 
@@ -252,13 +291,29 @@ describe("Lists route", function() {
 
 	describe("Deleting a list", function() {
 
-		it("Should return http status 'no content' (204) if list exists", function(done) {
+		it("Should return http status 'no content' (204)", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.delete("/api/lists/" + savedList._id)
 					.set("Authorization", authenticationToken)
 					.expect(204, done);
+			});
+		});
+
+		it("Should delete the list in the data store", function(done) {
+
+			createPersistedList("My list", user, function(savedList) {
+				request(app)
+					.delete("/api/lists/" + savedList._id)
+					.set("Authorization", authenticationToken)
+					.end(function() {
+
+						List.findById(savedList._id, function(err, deletedList) {
+							assert.equal(deletedList, null);
+							done();
+						});
+					});
 			});
 		});
 
