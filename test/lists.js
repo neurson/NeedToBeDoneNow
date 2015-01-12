@@ -12,6 +12,9 @@ var User = Models.User;
 var fakeId = "000000000000000000000000";
 var authenticationToken = "Basic " + base64.encode("foo:bar");
 
+var epa = require("epa").getEnvironment();
+var dbConnectionString = epa.get("DBConnectionString");
+
 describe("Lists route", function() {
 
 	var user;
@@ -29,7 +32,7 @@ describe("Lists route", function() {
 		});
 	};
 
-	before(function(done) {
+	before(function() {
 
 		// Clean database
 		for (var collection in mongoose.connection.collections) {
@@ -42,17 +45,21 @@ describe("Lists route", function() {
     	user.username = "foo";
     	user.password = "bar";
 
-    	user.save(done);		
+    	user.save();
 	});
 
 	after(function(done) {
+		for (var collection in mongoose.connection.collections) {
+			mongoose.connection.collections[collection].remove(function() {});
+		}
+
 		done();
 	});
 
 	describe("Getting all lists", function() {
 
 		it("Should return http status 'ok' (200)", function(done) {
-			request(app)				
+			request(app)
 				.get("/api/lists")
 				.set("Authorization", authenticationToken)
 				.expect("Content-Type", /json/)	
@@ -88,7 +95,7 @@ describe("Lists route", function() {
 
 	describe("Getting a list by identifier", function() {
 
-		it("Should return http status 'ok' (200) if list exists", function(done) {
+		it("Should return http status 'ok' (200)", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
@@ -328,7 +335,7 @@ describe("Lists route", function() {
 						if (err) return done(err);
 
 						List.findById(savedList._id, function(err2, lst) {
-							if (err2) return done(err2);			
+							if (err2) return done(err2);
 							assert.notEqual(lst, null);
 							done();
 						});
