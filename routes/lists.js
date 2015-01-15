@@ -4,6 +4,10 @@ var Models = require("../models");
 var router = new express.Router();
 var List = Models.List;
 
+// Tasks sub-route
+var tasks = require("./tasks");
+router.use("/:list_id/tasks", tasks);
+
 router.param("list_id", function (req, res, next, listId) {
 
 	List.findById(listId, function(err, list) {
@@ -22,6 +26,7 @@ router.param("list_id", function (req, res, next, listId) {
 			return next(fobidden);
 		}
 
+		// TODO: Ensure that data already in appData will not be overwritten.
 		req.appData = {
 			list: list
 		};
@@ -52,7 +57,7 @@ router.post("/", function (req, res) {
 });
 
 router.get("/:list_id", function (req, res) {
-	res.status(200).send(req.appData.list);	
+	res.status(200).send(req.appData.list);
 });
 
 router.put("/:list_id", function (req, res) {

@@ -4,9 +4,9 @@ var Models = require("../models");
 var router = new express.Router();
 var Task = Models.Task;
 
-router.param("task_id", function (req, res, next, listId) {
+router.param("task_id", function (req, res, next, taskId) {
 
-    Task.findById(listId, function(err, task) {
+    Task.findOne({"_id": taskId, belongTo : req.appData.list}, function(err, task) {
 
         if (err) return next(err);
 
@@ -22,6 +22,7 @@ router.param("task_id", function (req, res, next, listId) {
             return next(fobidden);
         }
 
+        // TODO: Ensure that data already in appData will not be overwritten.
         req.appData = {
             task: task
         };
@@ -32,7 +33,7 @@ router.param("task_id", function (req, res, next, listId) {
 
 router.get("/", function (req, res) {
 
-    Task.find({ owner: req.user}, function(err, tasks) {
+    Task.find({ owner : req.user, belongTo : req.appData.list}, function(err, tasks) {
         if (err) throw err;
         res.status(200).send(tasks);
     });
@@ -45,6 +46,7 @@ router.post("/", function (req, res) {
     task.name = req.body.name;
     task.createdOn = new Date();
     task.owner = req.user;
+    task.belongTo = req.appData.list;
 
     task.save(function(err, newTask) {
         if (err) throw err;

@@ -49,10 +49,6 @@ describe("Lists route", function() {
 	});
 
 	after(function(done) {
-		for (var collection in mongoose.connection.collections) {
-			mongoose.connection.collections[collection].remove(function() {});
-		}
-
 		done();
 	});
 
@@ -132,7 +128,7 @@ describe("Lists route", function() {
 			});
 		});
 
-		it("Should return http status 'not found' (404) if list is missing", function(done) {
+		it("Should return http status 'not found' (404) if list does not exists", function(done) {
 			request(app)
 				.get("/api/lists/" + fakeId)
 				.set("Authorization", authenticationToken)
@@ -271,7 +267,7 @@ describe("Lists route", function() {
 			});
 		});
 
-		it("Should return http status 'not found' (404) if list is missing", function(done) {
+		it("Should return http status 'not found' (404) if list does not exists", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
@@ -343,7 +339,7 @@ describe("Lists route", function() {
 			});
 		});
 
-		it("Should return http status 404 if list is missing", function(done) {
+		it("Should return http status 404 if list does not exists", function(done) {
 			request(app)
 				.delete("/api/lists/" + fakeId)
 				.set("Authorization", authenticationToken)
