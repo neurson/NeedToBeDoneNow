@@ -44,7 +44,6 @@ router.post("/", function (req, res) {
     var task = new Task();
 
     task.name = req.body.name;
-    task.createdOn = new Date();
     task.owner = req.user;
     task.belongTo = req.appData.list;
 
