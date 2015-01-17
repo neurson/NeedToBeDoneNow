@@ -12,9 +12,6 @@ var User = Models.User;
 var fakeId = "000000000000000000000000";
 var authenticationToken = "Basic " + base64.encode("foo:bar");
 
-var epa = require("epa").getEnvironment();
-var dbConnectionString = epa.get("DBConnectionString");
-
 describe("Lists route", function() {
 
 	var user;
@@ -53,7 +50,6 @@ describe("Lists route", function() {
 	});
 
 	describe("Getting all lists", function() {
-
 		it("Should return http status 'ok' (200)", function(done) {
 			request(app)
 				.get("/api/lists")
@@ -63,7 +59,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should only return the lists which the logged user is the owner", function(done) {
-
 			createPersistedList("My list 1", user, function() {
 				createPersistedList("My list 2", new User(), function() {
 					request(app)
@@ -90,9 +85,7 @@ describe("Lists route", function() {
 	});
 
 	describe("Getting a list by identifier", function() {
-
 		it("Should return http status 'ok' (200)", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.get("/api/lists/" + savedList._id)
@@ -102,24 +95,20 @@ describe("Lists route", function() {
 		});
 
 		it("Should return the list", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.get("/api/lists/" + savedList._id)
 					.set("Authorization", authenticationToken)
 					.expect("Content-Type", /json/)
 					.end(function(err, res) {
-
 						assert.equal(res.body._id, savedList._id);
 						assert.equal(res.body.name, savedList.name);
-
 						done();
 					});
 			});
 		});
 
 		it("Should return http status 'forbidden' (403) if the logged user is not the list owner", function(done) {
-
 			createPersistedList("My list", new User(), function(savedList) {
 				request(app)
 					.get("/api/lists/" + savedList._id)
@@ -145,7 +134,6 @@ describe("Lists route", function() {
 	describe("Creating a new list", function(done) {
 
 		it("Should return http status 'created' (201)", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.post("/api/lists")
@@ -156,7 +144,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should return the list created", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.post("/api/lists")
@@ -167,7 +154,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should add the created list in the data store", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.post("/api/lists")
@@ -184,7 +170,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should make the logged user owner's of the list", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.post("/api/lists")
@@ -199,7 +184,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should return http status 'unauthorized' (401) if credentials are not valid", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.post("/api/lists")
@@ -210,16 +194,11 @@ describe("Lists route", function() {
 	});
 
 	describe("Updating a list", function() {
-
 		it("Should return http status 'no content' 204", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
-
-				savedList.name = "my list 2";
-				
 				request(app)
 					.put("/api/lists/"  + savedList._id)
-					.send(savedList)
+					.send({ name: "my list 2"})
 					.set("Authorization", authenticationToken)
 					.expect(204, done);
 			});
@@ -228,16 +207,13 @@ describe("Lists route", function() {
 		it("Should update the list in the data store", function(done) {
 
 			createPersistedList("My list", user, function(savedList) {
-
-				savedList.name = "my list 2";
-
 				request(app)
 					.put("/api/lists/"  + savedList._id)
-					.send(savedList)
+					.send({ name: "my list 2"})
 					.set("Authorization", authenticationToken)
 					.end(function() {
 						List.findById(savedList._id, function(err, updatedList) {
-							assert.equal(updatedList.name, savedList.name);
+							assert.equal(updatedList.name, "my list 2");
 							done();
 						})
 					});
@@ -245,14 +221,10 @@ describe("Lists route", function() {
 		});
 
 		it("Should return http status 'forbidden' (403) if the logged user is not the list owner", function(done) {
-
 			createPersistedList("My list", new User(), function(savedList) {
-
-				savedList.name = "my list 2";
-				
 				request(app)
 					.put("/api/lists/"  + savedList._id)
-					.send(savedList)
+					.send({ name: "my list 2"})
 					.set("Authorization", authenticationToken)
 					.expect(403)
 					.end(function(err, res) {
@@ -268,34 +240,27 @@ describe("Lists route", function() {
 		});
 
 		it("Should return http status 'not found' (404) if list does not exists", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.put("/api/lists/" + fakeId)
-					.send(savedList)
+					.send({ name: "my list 2"})
 					.set("Authorization", authenticationToken)
 					.expect(404, done);
 			});
 		});
 
 		it("Should return http status 'unauthorized' (401) if credentials are not valid", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
-
-				savedList.name = "my list 2";
-				
 				request(app)
 					.put("/api/lists/" + fakeId)
-					.send(savedList)
+					.send({ name: "my list 2"})
 					.expect(401, done);
 			});
 		});
 	});
 
 	describe("Deleting a list", function() {
-
 		it("Should return http status 'no content' (204)", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.delete("/api/lists/" + savedList._id)
@@ -305,13 +270,11 @@ describe("Lists route", function() {
 		});
 
 		it("Should delete the list in the data store", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.delete("/api/lists/" + savedList._id)
 					.set("Authorization", authenticationToken)
 					.end(function() {
-
 						List.findById(savedList._id, function(err, deletedList) {
 							assert.equal(deletedList, null);
 							done();
@@ -321,7 +284,6 @@ describe("Lists route", function() {
 		});
 
 		it("Should return http status 'forbidden' (403) if the logged user is not the list owner", function(done) {
-
 			createPersistedList("My list", new User(), function(savedList) {
 				request(app)
 					.delete("/api/lists/" + savedList._id)
@@ -329,7 +291,6 @@ describe("Lists route", function() {
 					.expect(403)
 					.end(function(err, res) {
 						if (err) return done(err);
-
 						List.findById(savedList._id, function(err2, lst) {
 							if (err2) return done(err2);
 							assert.notEqual(lst, null);
@@ -347,7 +308,6 @@ describe("Lists route", function() {
 		});		
 
 		it("Should return http status Unauthorized (401) if credentials are not valid", function(done) {
-
 			createPersistedList("My list", user, function(savedList) {
 				request(app)
 					.delete("/api/lists/" + savedList._id)

@@ -26,10 +26,8 @@ router.param("list_id", function (req, res, next, listId) {
 			return next(fobidden);
 		}
 
-		// TODO: Ensure that data already in appData will not be overwritten.
-		req.appData = {
-			list: list
-		};
+		req.appData = req.appData || {};
+		req.appData.list = list;
 
 		return next();		
 	});
