@@ -1,6 +1,6 @@
 // Load required packages
-var mongoose = require('mongoose');
-var bcrypt = require('bcrypt-nodejs');
+var mongoose = require("mongoose");
+var bcrypt = require("bcrypt-nodejs");
 
 // Define our user schema
 var UserSchema = new mongoose.Schema({
@@ -27,7 +27,7 @@ UserSchema.pre('save', function(callback) {
   var user = this;
 
   // Break out if the password hasn't changed
-  if (!user.isModified('password')) return callback();
+  if (!user.isModified("password")) return callback();
 
   // Password changed so we need to hash it
   bcrypt.genSalt(5, function(err, salt) {

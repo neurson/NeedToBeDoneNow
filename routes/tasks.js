@@ -1,56 +1,38 @@
 var express = require("express");
-var Models = require("../models");
-
 var router = new express.Router();
-var Task = Models.Task;
 
 router.param("task_id", function (req, res, next, taskId) {
 
-    Task.findOne({"_id": taskId, belongTo : req.appData.list}, function(err, task) {
+    var tasks = req.appData.list.task.id(taskId);
 
-        if (err) return next(err);
+    if (!tasks) {
+        var notFound = new Error('Resource not found')
+        notFound.status = 404;
+        return next(notFound);
+    }
 
-        if (!task) {
-            var notFound = new Error('Resource not found')
-            notFound.status = 404;
-            return next(notFound);
-        }
+    req.appData.task = tasks;
 
-        if (!task.owner.equals(req.user._id)) {
-            var fobidden = new Error('Fobidden')
-            fobidden.status = 403;
-            return next(fobidden);
-        }
-
-        // TODO: Ensure that data already in appData will not be overwritten.
-        req.appData = {
-            task: task
-        };
-
-        return next();
-    });
+    return next();
 });
 
 router.get("/", function (req, res) {
-
-    Task.find({ owner : req.user, belongTo : req.appData.list}, function(err, tasks) {
-        if (err) throw err;
-        res.status(200).send(tasks);
-    });
+    return res.status(200).send(req.appData.list.task);
 });
 
 router.post("/", function (req, res) {
 
-    var task = new Task();
+    var list = req.appData.list;
+    var task = list.task.create({
+        name: req.body.name,
+        owner: req.user
+    });
 
-    task.name = req.body.name;
-    task.createdOn = new Date();
-    task.owner = req.user;
-    task.belongTo = req.appData.list;
+    list.task.push(task);
 
-    task.save(function(err, newTask) {
+    list.save(function(err) {
         if (err) throw err;
-        res.status(201).send(newTask);
+        res.status(201).send(task);
     });
 });
 
@@ -60,16 +42,27 @@ router.get("/:task_id", function (req, res) {
 
 router.put("/:task_id", function (req, res) {
 
-    req.appData.task.name = req.body.name;
-    req.appData.task.save(function(err, updatedDoc) {
-        res.status(204).send(updatedDoc);
+    var list = req.appData.list;
+    var tasks = req.appData.task;
+
+    tasks.name = req.body.name;
+
+    list.save(function(err, list) {
+        if (err) throw err;
+        res.status(204).send(list.task.id(req.params.task_id));
     });
 });
 
 router.delete("/:task_id", function (req, res) {
 
-    req.appData.task.remove(function(err, removedDoc) {
-        res.status(204).send(removedDoc);
+    var task = req.appData.task;
+    var list = req.appData.list;
+
+    list.task.remove(task);
+
+    list.save(function(err) {
+        if (err) throw err;
+        res.status(204).send(task);
     });
 });
 
