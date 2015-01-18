@@ -43,20 +43,21 @@ router.get("/:task_id", function (req, res) {
 router.put("/:task_id", function (req, res) {
 
     var list = req.appData.list;
-    var tasks = req.appData.task;
+    var task = req.appData.task;
+    var id = list.id;
 
-    tasks.name = req.body.name;
+    task.name = req.body.name;
 
-    list.save(function(err, list) {
+    list.save(function(err) {
         if (err) throw err;
-        res.status(204).send(list.task.id(req.params.task_id));
+        res.status(204).send(task);
     });
 });
 
 router.delete("/:task_id", function (req, res) {
 
-    var task = req.appData.task;
     var list = req.appData.list;
+    var task = req.appData.task;
 
     list.task.remove(task);
 
