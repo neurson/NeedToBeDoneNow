@@ -5,9 +5,8 @@ var base64 = require('base-64');
 
 var app = require("../app");
 
-var Models = require("../models");
-var List = Models.List;
-var User = Models.User;
+var User = require("../lib/user");
+var List = require("../lib/task");
 
 var fakeId = "000000000000000000000000";
 var authenticationToken = "Basic " + base64.encode("foo:bar");

@@ -1,8 +1,7 @@
 var express = require("express");
-var Models = require("../models");
-
 var router = new express.Router();
-var List = Models.List;
+
+var List = require("../lib/task");
 
 // Tasks sub-route
 var tasks = require("./tasks");
