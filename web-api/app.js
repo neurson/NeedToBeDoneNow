@@ -2,7 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var mongoose = require("mongoose");
 var passport = require("passport");
-var authenticator = require("./lib/authenticator");
+var authenticator = require("./../lib/authenticator/index");
 var epa = require("epa").getEnvironment();
 
 var dbConnectionString = epa.get("DBConnectionString");

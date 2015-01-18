@@ -1,7 +1,7 @@
 var express = require("express");
 var router = new express.Router();
 
-var List = require("../lib/task");
+var List = require("../../lib/task");
 
 // Tasks sub-route
 var tasks = require("./tasks");
