@@ -8,7 +8,7 @@ Yes, this is an another « TODO » app. Pretty boring… :)
 
 For now, I have a basic tests suite that consumes the service and ensures is sanity.
 
-The service handles authentication, but this is « Basic Authentication ». This type of authentication is only secure over HTTPS.
+The service handles authentication, but this is « Basic Authentication ». « Basic Authentication » is only secure over HTTPS.
 
 This is mostly what I used to build this project:
 - [Express](http://expressjs.com/)
