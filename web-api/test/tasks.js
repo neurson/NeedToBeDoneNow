@@ -249,12 +249,14 @@ describe("Tasks route", function () {
 
                 request(app)
                     .put("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .send( {name: "my task 2"} )
+                    .send( { name: "my task 2", isDone: true } )
                     .set("Authorization", authenticationToken)
                     .end(function () {
                         List.findById(savedList._id, function (err, list) {
                             if (err) throw err;
-                            assert.equal(list.task.id(newTask._id).name, "my task 2");
+                            var task = list.task.id(newTask._id);
+                            assert.equal(task.name, "my task 2");
+                            assert.equal(task.isDone, true);
                             done();
                         })
                     });

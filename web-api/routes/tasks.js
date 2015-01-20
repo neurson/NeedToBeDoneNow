@@ -44,9 +44,14 @@ router.put("/:task_id", function (req, res) {
 
     var list = req.appData.list;
     var task = req.appData.task;
-    var id = list.id;
 
-    task.name = req.body.name;
+    if (req.body.name) {
+        task.name = req.body.name;
+    }
+
+    if (req.body.isDone) {
+        task.isDone = req.body.isDone;
+    }
 
     list.save(function(err) {
         if (err) throw err;
