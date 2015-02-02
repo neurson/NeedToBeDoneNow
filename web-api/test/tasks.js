@@ -8,417 +8,344 @@ var app = require("../app");
 var User = require("../../lib/user");
 var List = require("../../lib/task");
 
-var fakeId = "000000000000000000000000";
 var authenticationToken = "Basic " + base64.encode("foo:bar");
 
-describe("Tasks route", function () {
+var cleanDatabase = function () {
+    for (var collection in mongoose.connection.collections) {
+        mongoose.connection.collections[collection].remove(function () {
+        });
+    }
+};
+
+describe("Getting all tasks", function () {
 
     var user;
+    var list;
+    var task;
 
     before(function () {
+        cleanDatabase();
 
-        // Clean database
-        for (var collection in mongoose.connection.collections) {
-            mongoose.connection.collections[collection].remove(function () {
-            });
-        }
-
-        // Create a valid user
-        user = new User( { username: "foo", password: "bar"} );
+        user = new User({username: "foo", password: "bar"});
         user.save();
+
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
+
+        list.task.push(task);
+
+        list.save();
     });
 
-    after(function (done) {
-        done();
+    it("Should return http status 'ok' (200)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/")
+            .set("Authorization", authenticationToken)
+            .expect("Content-Type", /json/)
+            .expect(200, done);
+    });
+});
+
+describe("Getting a task by identifier", function () {
+
+    var user;
+    var list;
+    var task;
+
+    before(function () {
+        cleanDatabase();
+
+        user = new User({username: "foo", password: "bar"});
+        user.save();
+
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
+
+        list.task.push(task);
+
+        list.save();
     });
 
-    describe("Getting all tasks", function () {
-
-        it("Should return http status 'ok' (200)", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/")
-                    .set("Authorization", authenticationToken)
-                    .expect("Content-Type", /json/)
-                    .expect(200, done);
-            });
-        });
-
-        it("Should return http status 'Unauthorized' (401) if credentials are not valid", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/" + fakeId)
-                    .expect(401, done);
-            });
-        });
+    it("Should return http status 'ok' (200)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .expect(200, done);
     });
 
-    describe("Getting a task by identifier", function () {
-        it("Should return http status 'ok' (200)", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .set("Authorization", authenticationToken)
-                    .expect(200, done);
+    it("Should return the task", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .expect("Content-Type", /json/)
+            .end(function (err, res) {
+                if (err) return done(err);
+                assert.equal(res.body._id, task._id);
+                assert.equal(res.body.name, task.name);
+                done();
             });
-        });
+    });
+});
 
-        it("Should return the task", function (done) {
+describe("Creating a new task", function () {
 
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
+    var user;
+    var list;
+    var task;
 
-            newList.task.push(newTask);
+    before(function () {
+        cleanDatabase();
 
-            newList.save(function (err, savedList) {
-                if (err) throw err;
+        user = new User({username: "foo", password: "bar"});
+        user.save();
 
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .set("Authorization", authenticationToken)
-                    .expect("Content-Type", /json/)
-                    .end(function (err, res) {
-                        if (err) throw err;
-                        assert.equal(res.body._id, newTask._id);
-                        assert.equal(res.body.name, newTask.name);
-                        done();
-                    });
-            });
-        });
+        list = new List({name: "My list", owner: user});
+        list.save();
 
-        it("Should return http status 'not found' (404) if task does not exists", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/" + fakeId)
-                    .set("Authorization", authenticationToken)
-                    .expect(404, done);
-            });
-        });
-
-        it("Should return http status 'not found' (404) if task does exists but does not belong to the list", function (done) {
-
-            var newList1 = new List( { name: "My list", owner: user } );
-            var newTask1 = newList1.task.create( { name: "My task" } );
-
-            newList1.task.push(newTask1);
-
-            newList1.save(function (err, savedList1) {
-                if (err) throw err;
-
-                var newList2 = new List( { name: "My list", owner: user } );
-                var newTask2 = newList2.task.create( { name: "My task" } );
-
-                newList2.task.push(newTask2);
-
-                newList2.save(function (err) {
-                    if (err) throw err;
-
-                    request(app)
-                        .get("/api/lists/" + savedList1._id + "/tasks/" + newTask2._id)
-                        .set("Authorization", authenticationToken)
-                        .expect(404, done);
-                });
-            });
-        });
-
-        it("Should return http status 'unauthorized' (401) if credentials are not valid", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .get("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .expect(401, done);
-            });
-        });
+        task = list.task.create({name: "My task"});
     });
 
-    describe("Creating a new task", function () {
-
-        it("Should return http status 'created' (201)", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .post("/api/lists/" + savedList._id + "/tasks/")
-                    .send(newTask)
-                    .set("Authorization", authenticationToken)
-                    .expect(201, done);
-            });
-        });
-
-        it("Should return the task created", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .post("/api/lists/" + savedList._id + "/tasks/")
-                    .send(newTask)
-                    .set("Authorization", authenticationToken)
-                    .expect("Content-Type", /json/, done);
-            });
-        });
-
-        it("Should return http status 'unauthorized' (401) if credentials are not valid", function (done) {
-
-            var newList = new List( { name: "My list", owner: new User() } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.save(function (err) {
-                if (err) throw err;
-
-                request(app)
-                    .post("/api/lists/" + newTask._id + "/tasks/")
-                    .send(newTask)
-                    .expect(401, done);
-            });
-        });
+    it("Should return http status 'created' (201)", function (done) {
+        request(app)
+            .post("/api/lists/" + list._id + "/tasks/")
+            .send(task)
+            .set("Authorization", authenticationToken)
+            .expect(201, done);
     });
 
-    describe("Updating a task", function () {
+    it("Should return the task created", function (done) {
+        request(app)
+            .post("/api/lists/" + list._id + "/tasks/")
+            .send(task)
+            .set("Authorization", authenticationToken)
+            .expect("Content-Type", /json/, done);
+    });
+});
 
-        it("Should return http status 'no content' 204", function (done) {
+describe("Updating a task", function () {
 
-            var newList = new List( { name: "My list", owner:  user } );
-            var newTask = newList.task.create( { name: "My task" } );
+    var user;
+    var list;
+    var task;
 
-            newList.task.push(newTask);
+    before(function () {
+        cleanDatabase();
 
-            newList.save(function (err, savedList) {
-                if (err) throw err;
+        user = new User({username: "foo", password: "bar"});
+        user.save();
 
-                request(app)
-                    .put("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .send( {name: "my task 2"} )
-                    .set("Authorization", authenticationToken)
-                    .expect(204, done);
-            });
-        });
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
 
-        it("Should update the task in the data store", function (done) {
+        list.task.push(task);
 
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .put("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .send( { name: "my task 2", isDone: true } )
-                    .set("Authorization", authenticationToken)
-                    .end(function () {
-                        List.findById(savedList._id, function (err, list) {
-                            if (err) throw err;
-                            var task = list.task.id(newTask._id);
-                            assert.equal(task.name, "my task 2");
-                            assert.equal(task.isDone, true);
-                            done();
-                        })
-                    });
-            });
-        });
-
-        it("Should return http status 'not found' (404) if task does not exists", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .put("/api/lists/" + savedList._id + "/tasks/" + fakeId)
-                    .send( {name: "my task 2"} )
-                    .set("Authorization", authenticationToken)
-                    .expect(404, done);
-            });
-        });
-
-        it("Should return http status 'not found' (404) if task does exists but does not belong to the list", function (done) {
-
-            var newList1 = new List( { name: "My list", owner: user } );
-            var newTask1 = newList1.task.create( { name: "My task" } );
-
-            newList1.task.push(newTask1);
-
-            newList1.save(function (err, savedList1) {
-                if (err) throw err;
-
-                var newList2 = new List( { name: "My list", owner: user } );
-                var newTask2 = newList2.task.create( { name: "My task" } );
-
-                newList2.task.push(newTask2);
-
-                newList2.save(function (err, savedList2) {
-                    if (err) throw err;
-
-                    request(app)
-                        .put("/api/lists/" + savedList1._id + "/tasks/" + newTask2._id)
-                        .send( {name: "my task 2"} )
-                        .set("Authorization", authenticationToken)
-                        .expect(404, done);
-                });
-            });
-        });
-
-        it("Should return http status 'unauthorized' (401) if credentials are not valid", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .put("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .send( {name: "my task 2"} )
-                    .expect(401, done);
-            });
-        });
+        list.save();
     });
 
-    describe("Deleting a task", function () {
+    it("Should return http status 'no content' 204", function (done) {
+        request(app)
+            .put("/api/lists/" + list._id + "/tasks/" + task._id)
+            .send({name: "my task 2"})
+            .set("Authorization", authenticationToken)
+            .expect(204, done);
+    });
 
-        it("Should return http status 'no content' (204)", function (done) {
-
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
-
-            newList.task.push(newTask);
-
-            newList.save(function (err, savedList) {
-                if (err) throw err;
-
-                request(app)
-                    .delete("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .set("Authorization", authenticationToken)
-                    .expect(204, done);
+    it("Should update the task in the data store", function (done) {
+        request(app)
+            .put("/api/lists/" + list._id + "/tasks/" + task._id)
+            .send({name: "my task 2", isDone: true})
+            .set("Authorization", authenticationToken)
+            .end(function () {
+                List.findById(list._id, function (err, fetchedList) {
+                    if (err) return done(err);
+                    var fetchedTask = fetchedList.task.id(task._id);
+                    assert.equal(fetchedTask.name, "my task 2");
+                    assert.equal(fetchedTask.isDone, true);
+                    done();
+                })
             });
-        });
+    });
+});
 
-        it("Should delete the task in the data store", function (done) {
+describe("Deleting a task", function () {
 
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
+    var user;
+    var list;
+    var task;
 
-            newList.task.push(newTask);
+    before(function () {
+        cleanDatabase();
 
-            newList.save(function (err, savedList) {
-                if (err) throw err;
+        user = new User({username: "foo", password: "bar"});
+        user.save();
 
-                request(app)
-                    .delete("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .set("Authorization", authenticationToken)
-                    .end(function () {
-                        List.findById(savedList._id, function (err, list) {
-                            if (err) throw err;
-                            assert.equal(list.task.id(newTask._id), null);
-                            done();
-                        })
-                    });
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
+
+        list.task.push(task);
+
+        list.save();
+    });
+
+    it("Should return http status 'no content' (204)", function (done) {
+        request(app)
+            .delete("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .expect(204, done);
+    });
+
+    it("Should delete the task in the data store", function (done) {
+        request(app)
+            .delete("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .end(function () {
+                List.findById(list._id, function (err, list) {
+                    if (err) return done(err);
+                    assert.equal(list.task.id(task._id), null);
+                    done();
+                })
             });
-        });
+    });
+});
 
-        it("Should return http status 404 if task does not exists", function (done) {
+describe("Credentials are not valid", function () {
 
-            var newList = new List( { name: "My list", owner: user } );
+    var user;
+    var list;
+    var task;
 
-            newList.save(function (err, savedList) {
-                if (err) throw err;
+    before(function () {
+        cleanDatabase();
 
-                request(app)
-                    .delete("/api/lists/" + savedList._id + "/tasks/" + fakeId)
-                    .set("Authorization", authenticationToken)
-                    .expect(404, done);
-            });
-        });
+        user = new User({username: "foo", password: "bar"});
+        user.save();
 
-        it("Should return http status 404 if task does exists but does not belong to the list", function (done) {
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
 
-            var newList1 = new List( { name: "My list 1", owner: user } );
-            var newTask1 = newList1.task.create( { name: "My task 1" } );
+        list.task.push(task);
 
-            newList1.task.push(newTask1);
+        list.save();
+    });
 
-            newList1.save(function (err, savedList1) {
-                if (err) throw err;
+    it("Getting all lists returns http status 'Unauthorized' (401)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + task._id)
+            .expect(401, done);
+    });
 
-                var newList2 = new List( { name: "My list 2", owner: user } );
-                var newTask2 = newList2.task.create( { name: "My task 2" } );
+    it("Getting a list returns http status 'unauthorized' (401)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + task._id)
+            .expect(401, done);
+    });
 
-                newList2.task.push(newTask2);
+    it("Creating a list returns http status 'unauthorized' (401)", function (done) {
+        request(app)
+            .post("/api/lists/" + list._id + "/tasks/")
+            .send(list.task.create({name: "My task2"}))
+            .expect(401, done);
+    });
 
-                newList2.save(function (err) {
-                    if (err) throw err;
+    it("Updating a list returns http status 'unauthorized' (401)", function (done) {
+        request(app)
+            .put("/api/lists/" + list._id + "/tasks/" + task._id)
+            .send({name: "my task 2"})
+            .expect(401, done);
+    });
 
-                    request(app)
-                        .delete("/api/lists/" + savedList1._id + "/tasks/" + newTask2._id)
-                        .set("Authorization", authenticationToken)
-                        .expect(404, done);
-                });
-            });
-        });
+    it("Deleting a list returns http status Unauthorized (401)", function (done) {
+        request(app)
+            .delete("/api/lists/" + list._id + "/tasks/" + task._id)
+            .expect(401, done);
+    });
+});
 
-        it("Should return http status Unauthorized (401) if credentials are not valid", function (done) {
+describe("Task does not exists", function () {
 
-            var newList = new List( { name: "My list", owner: user } );
-            var newTask = newList.task.create( { name: "My task" } );
+    var user;
+    var list;
+    var fakeId = "000000000000000000000000";
 
-            newList.task.push(newTask);
+    before(function () {
+        cleanDatabase();
 
-            newList.save(function (err, savedList) {
-                if (err) throw err;
+        user = new User({username: "foo", password: "bar"});
+        user.save();
 
-                request(app)
-                    .delete("/api/lists/" + savedList._id + "/tasks/" + newTask._id)
-                    .expect(401, done);
-            });
-        });
+        list = new List({name: "My list", owner: user});
+        task = list.task.create({name: "My task"});
+
+        list.task.push(task);
+
+        list.save();
+    });
+
+    it("Getting a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + fakeId)
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
+    });
+
+    it("Updating a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .put("/api/lists/" + list._id + "/tasks/" + fakeId)
+            .send({name: "my task 2"})
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
+    });
+
+    it("Deleting a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .delete("/api/lists/" + list._id + "/tasks/" + fakeId)
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
+    });
+});
+
+describe("Task does not belong to the user list", function () {
+
+    var user;
+    var list;
+    var task;
+
+    before(function () {
+        cleanDatabase();
+
+        user = new User({username: "foo", password: "bar"});
+        user.save();
+
+        list = new List({name: "My list", owner: user});
+        list.save();
+
+        var anotherList = new List({name: "My another list", owner: user});
+        task = anotherList.task.create({name: "My task"});
+
+        anotherList.task.push(task);
+
+        anotherList.save();
+    });
+
+    it("Getting a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .get("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
+    });
+
+    it("Updating a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .put("/api/lists/" + list._id + "/tasks/" + task._id)
+            .send({name: "my task 2"})
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
+    });
+
+    it("Delete a task returns http status 'not found' (404)", function (done) {
+        request(app)
+            .delete("/api/lists/" + list._id + "/tasks/" + task._id)
+            .set("Authorization", authenticationToken)
+            .expect(404, done);
     });
 });

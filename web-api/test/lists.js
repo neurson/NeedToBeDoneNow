@@ -100,62 +100,45 @@ describe("Creating a new list", function () {
     });
 
     it("Returns http status 'created' (201)", function (done) {
-        newList.save(function (err, savedList) {
-
-            if (err) throw err;
-
-            request(app)
-                .post("/api/lists")
-                .send(savedList)
-                .set("Authorization", authenticationToken)
-                .expect(201, done);
-        });
+        request(app)
+            .post("/api/lists")
+            .send(newList)
+            .set("Authorization", authenticationToken)
+            .expect(201, done);
     });
 
     it("Return the list created", function (done) {
-        newList.save(function (err, savedList) {
-            if (err) throw err;
-
-            request(app)
-                .post("/api/lists")
-                .send(savedList)
-                .set("Authorization", authenticationToken)
-                .expect("Content-Type", /json/, done);
-        });
+        request(app)
+            .post("/api/lists")
+            .send(newList)
+            .set("Authorization", authenticationToken)
+            .expect("Content-Type", /json/, done);
     });
 
     it("Add the created list in the data store", function (done) {
-        newList.save(function (err, savedList) {
-            if (err) throw err;
-
-            request(app)
-                .post("/api/lists")
-                .send(savedList)
-                .set("Authorization", authenticationToken)
-                .expect(200)
-                .end(function (err, res) {
-                    List.findById(res.body._id, function (err, createdList) {
-                        assert.notEqual(createdList, null);
-                        done();
-                    });
+        request(app)
+            .post("/api/lists")
+            .send(newList)
+            .set("Authorization", authenticationToken)
+            .expect(200)
+            .end(function (err, res) {
+                List.findById(res.body._id, function (err, createdList) {
+                    assert.notEqual(createdList, null);
+                    done();
                 });
-        });
+            });
     });
 
     it("Makes the logged user owner's of the list", function (done) {
-        newList.save(function (err, savedList) {
-            if (err) throw err;
-
-            request(app)
-                .post("/api/lists")
-                .send(savedList)
-                .set("Authorization", authenticationToken)
-                .expect(200)
-                .end(function (err, res) {
-                    assert.equal(user._id, res.body.owner);
-                    done();
-                });
-        });
+        request(app)
+            .post("/api/lists")
+            .send(newList)
+            .set("Authorization", authenticationToken)
+            .expect(200)
+            .end(function (err, res) {
+                assert.equal(user._id, res.body.owner);
+                done();
+            });
     });
 });
 
@@ -263,7 +246,7 @@ describe("Credentials are not valid", function () {
     it("Creating a list Http status 'unauthorized' (401)", function (done) {
         request(app)
             .post("/api/lists")
-            .send(list)
+            .send(new List({name: "My list 2", owner: user}))
             .expect(401, done);
     });
 
